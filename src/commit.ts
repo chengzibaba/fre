@@ -1,49 +1,48 @@
-import { IFiber, IRef } from './type'
-import { updateElement } from './dom'
-import { isFn, LANE } from './reconcile'
+import { IFiber, IRef } from './type';
+import { updateElement } from './dom';
+import { isFn, LANE } from './reconcile';
 
 export const commit = (fiber: IFiber): void => {
-  let d = fiber
-  let e = d.e
-  fiber.e = null
+  let d = fiber;
+  let e = d.e;
+  fiber.e = null;
   do {
-    insert(e)
-  } while ((e = e.e))
-  while ((d = d.d)) remove(d)
-  fiber.d = null
-}
+    insert(e);
+  } while ((e = e.e));
+  while ((d = d.d)) remove(d);
+  fiber.d = null;
+};
 
 const insert = (fiber: IFiber): void => {
   if (fiber.lane & LANE.UPDATE) {
-    updateElement(fiber.node, fiber.oldProps || {}, fiber.props)
+    updateElement(fiber.node, fiber.oldProps || {}, fiber.props);
   }
   if (fiber.lane & LANE.INSERT) {
-    fiber.parentNode.insertBefore(fiber.node, fiber.after)
+    fiber.parentNode.insertBefore(fiber.node, fiber.after);
   }
-  refer(fiber.ref, fiber.node)
-}
+  refer(fiber.ref, fiber.node);
+};
 
 const refer = (ref: IRef, dom?: HTMLElement): void => {
-  if (ref)
-    isFn(ref) ? ref(dom) : ((ref as { current?: HTMLElement })!.current = dom)
-}
+  if (ref) isFn(ref) ? ref(dom) : ((ref as { current?: HTMLElement })!.current = dom);
+};
 
 const kidsRefer = (kids: any): void => {
-  kids.forEach(kid => {
-    kid.kids && kidsRefer(kid.kids)
-    refer(kid.ref, null)
-  })
-}
+  kids.forEach((kid) => {
+    kid.kids && kidsRefer(kid.kids);
+    refer(kid.ref, null);
+  });
+};
 
-const remove = d => {
+const remove = (d) => {
   if (d.isComp) {
     if (d.lane & LANE.REMOVE) {
-      d.hooks && d.hooks.list.forEach(e => e[2] && e[2]())
+      d.hooks && d.hooks.list.forEach((e) => e[2] && e[2]());
     }
-    d.kids.forEach(remove)
+    d.kids.forEach(remove);
   } else {
-    kidsRefer(d.kids)
-    d.parentNode.removeChild(d.node)
-    refer(d.ref, null)
+    kidsRefer(d.kids);
+    d.parentNode.removeChild(d.node);
+    refer(d.ref, null);
   }
-}
+};

@@ -1,40 +1,34 @@
-import { isStr, arrayfy } from "./reconcile"
-import { FreElement } from "./type"
+import { isStr, arrayfy } from './reconcile';
+import { FreElement } from './type';
 
 // for jsx2
 export const h = (type, props: any, ...kids) => {
-  props = props || {}
-  const c = arrayfy(props.children || kids)
-  kids = flat(c).filter(some)
-  if (kids.length) props.children = kids.length === 1 ? kids[0] : kids
+  props = props || {};
+  const c = arrayfy(props.children || kids);
+  kids = flat(c).filter(some);
+  if (kids.length) props.children = kids.length === 1 ? kids[0] : kids;
   let key = props.key || null,
-    ref = props.ref || null
-  delete props.key
-  delete props.ref
-  return createVnode(type, props, key, ref)
-}
+    ref = props.ref || null;
+  delete props.key;
+  delete props.ref;
+  return createVnode(type, props, key, ref);
+};
 
-const some = (x: unknown) => x != null && x!== true && x !== false
+const some = (x: unknown) => x != null && x !== true && x !== false;
 
-const flat = (arr) =>
-  [].concat(
-    ...arr.map((v) =>
-      isArr(v) ? [].concat(flat(v)) : isStr(v) ? createText(v) : v
-    )
-  )
+const flat = (arr) => [].concat(...arr.map((v) => (isArr(v) ? [].concat(flat(v)) : isStr(v) ? createText(v) : v)));
 
 export const createVnode = (type, props, key, ref) => ({
   type,
   props,
   key,
-  ref
-})
+  ref,
+});
 
-export const createText = (vnode: any) =>
-  ({ type: "", props: { nodeValue: vnode + "" } } as FreElement)
+export const createText = (vnode: any) => ({ type: '', props: { nodeValue: vnode + '' } } as FreElement);
 
 export function Fragment(props) {
-  return props.children
+  return props.children;
 }
 
-export const isArr = Array.isArray
+export const isArr = Array.isArray;

@@ -1,23 +1,15 @@
-import {
-  IFiber,
-  FreElement,
-  FC,
-  Attributes,
-  HTMLElementEx,
-  FreNode,
-  IEffect,
-} from './type'
-import { createElement } from './dom'
-import { resetCursor } from './hook'
-import { schedule, shouldYield } from './schedule'
-import { isArr, createText } from './h'
-import { commit } from './commit'
+import { IFiber, FreElement, FC, Attributes, HTMLElementEx, FreNode, IEffect } from './type';
+import { createElement } from './dom';
+import { resetCursor } from './hook';
+import { schedule, shouldYield } from './schedule';
+import { isArr, createText } from './h';
+import { commit } from './commit';
 
-let currentFiber: IFiber
-let finish = null
-let effect = null
-let detach = null
-export let options: any = {}
+let currentFiber: IFiber;
+let finish = null;
+let effect = null;
+let detach = null;
+export let options: any = {};
 
 export const enum LANE {
   UPDATE = 1 << 1,
@@ -33,90 +25,90 @@ export const render = (vnode: FreElement, node: Node, config?: any): void => {
   const rootFiber = {
     node,
     props: { children: vnode },
-  } as IFiber
+  } as IFiber;
   if (config) {
-    options = config
+    options = config;
   }
-  update(rootFiber)
-}
+  update(rootFiber);
+};
 
 export const update = (fiber?: IFiber) => {
+  // TODO: fiber可选类型是否可以改成强类型
   if (fiber && !(fiber.lane & LANE.DIRTY)) {
-    fiber.lane = LANE.UPDATE | LANE.DIRTY
+    fiber.lane = LANE.UPDATE | LANE.DIRTY;
     schedule(() => {
-      effect = detach = fiber
-      return reconcile(fiber)
-    })
+      effect = detach = fiber;
+      return reconcile(fiber);
+    });
   }
-}
+};
 
 const reconcile = (WIP?: IFiber): boolean => {
-  while (WIP && !shouldYield()) WIP = capture(WIP)
-  if (WIP) return reconcile.bind(null, WIP)
+  while (WIP && !shouldYield()) WIP = capture(WIP);
+  if (WIP) return reconcile.bind(null, WIP);
   if (finish) {
-    commit(finish)
-    finish = null
-    options.done && options.done()
+    commit(finish);
+    finish = null;
+    options.done && options.done();
   }
-  return null
-}
+  return null;
+};
 
 const capture = (WIP: IFiber): IFiber | undefined => {
-  WIP.isComp = isFn(WIP.type)
-  WIP.isComp ? updateHook(WIP) : updateHost(WIP)
-  if (WIP.child) return WIP.child
+  WIP.isComp = isFn(WIP.type);
+  WIP.isComp ? updateHook(WIP) : updateHost(WIP);
+  if (WIP.child) return WIP.child;
   while (WIP) {
-    bubble(WIP)
+    bubble(WIP);
     if (!finish && WIP.lane & LANE.DIRTY) {
-      finish = WIP
-      WIP.lane &= ~LANE.DIRTY
-      return null
+      finish = WIP;
+      WIP.lane &= ~LANE.DIRTY;
+      return null;
     }
-    if (WIP.sibling) return WIP.sibling
-    WIP = WIP.parent
+    if (WIP.sibling) return WIP.sibling;
+    WIP = WIP.parent;
   }
-}
+};
 
-const bubble = WIP => {
+const bubble = (WIP) => {
   if (WIP.isComp) {
     if (WIP.hooks) {
-      side(WIP.hooks.layout)
-      schedule(() => side(WIP.hooks.effect))
+      side(WIP.hooks.layout);
+      schedule(() => side(WIP.hooks.effect));
     }
   } else {
-    effect.e = WIP
-    effect = WIP
+    effect.e = WIP;
+    effect = WIP;
   }
-}
+};
 
 const updateHook = <P = Attributes>(WIP: IFiber): void => {
-  resetCursor()
-  currentFiber = WIP
-  let children = (WIP.type as FC<P>)(WIP.props)
-  diffKids(WIP, simpleVnode(children))
-}
+  resetCursor();
+  currentFiber = WIP;
+  let children = (WIP.type as FC<P>)(WIP.props);
+  diffKids(WIP, simpleVnode(children));
+};
 
 const updateHost = (WIP: IFiber): void => {
-  WIP.parentNode = (getParentNode(WIP) as any) || {}
+  WIP.parentNode = (getParentNode(WIP) as any) || {};
   if (!WIP.node) {
-    if (WIP.type === 'svg') WIP.lane |= LANE.SVG
-    WIP.node = createElement(WIP) as HTMLElementEx
+    if (WIP.type === 'svg') WIP.lane |= LANE.SVG;
+    WIP.node = createElement(WIP) as HTMLElementEx;
   }
-  WIP.after = WIP.parentNode['prev']
-  WIP.parentNode['prev'] = WIP.node
-  WIP.node['prev'] = null
+  WIP.after = WIP.parentNode['prev'];
+  WIP.parentNode['prev'] = WIP.node;
+  WIP.node['prev'] = null;
 
-  diffKids(WIP, WIP.props.children)
-}
+  diffKids(WIP, WIP.props.children);
+};
 
-const simpleVnode = (type: any) =>
-  isStr(type) ? createText(type as string) : type
+const simpleVnode = (type: any) => (isStr(type) ? createText(type as string) : type);
 
 const getParentNode = (WIP: IFiber): HTMLElement | undefined => {
   while ((WIP = WIP.parent)) {
-    if (!WIP.isComp) return WIP.node
+    if (!WIP.isComp) return WIP.node;
   }
-}
+};
 
 const diffKids = (WIP: any, children: FreNode): void => {
   let aCh = WIP.kids || [],
@@ -124,157 +116,156 @@ const diffKids = (WIP: any, children: FreNode): void => {
     aHead = 0,
     bHead = 0,
     aTail = aCh.length - 1,
-    bTail = bCh.length - 1
+    bTail = bCh.length - 1;
 
   while (aHead <= aTail && bHead <= bTail) {
-    if (!same(aCh[aTail], bCh[bTail])) break
-    clone(aCh[aTail--], bCh[bTail], LANE.UPDATE, WIP, bTail--)
+    if (!same(aCh[aTail], bCh[bTail])) break;
+    clone(aCh[aTail--], bCh[bTail], LANE.UPDATE, WIP, bTail--);
   }
 
   while (aHead <= aTail && bHead <= bTail) {
-    if (!same(aCh[aHead], bCh[bHead])) break
-    bCh[bHead].lane |= LANE.HEAD
-    aHead++
-    bHead++
+    if (!same(aCh[aHead], bCh[bHead])) break;
+    bCh[bHead].lane |= LANE.HEAD;
+    aHead++;
+    bHead++;
   }
 
   if (aHead > aTail) {
     while (bHead <= bTail) {
-      let c = bCh[bTail]
-      c.lane = LANE.INSERT
-      linke(c, WIP, bTail--)
+      let c = bCh[bTail];
+      c.lane = LANE.INSERT;
+      linke(c, WIP, bTail--);
     }
   } else if (bHead > bTail) {
     while (aHead <= aTail) {
-      let c = aCh[aTail--]
-      c.lane = LANE.REMOVE
-      detach.d = c
-      detach = c
+      let c = aCh[aTail--];
+      c.lane = LANE.REMOVE;
+      detach.d = c;
+      detach = c;
     }
   } else {
     let I = {},
-      P = []
+      P = [];
     for (let i = bHead; i <= bTail; i++) {
-      I[bCh[i].key || '.' + 1] = i
-      P[i] = -1
+      I[bCh[i].key || '.' + 1] = i;
+      P[i] = -1;
     }
     for (let i = aHead; i <= aTail; i++) {
-      let j = I[aCh[i].key || '.' + i]
+      let j = I[aCh[i].key || '.' + i];
       if (j != null) {
-        P[j] = i
+        P[j] = i;
       } else {
-        let c = aCh[i]
-        c.lane = LANE.REMOVE
-        detach.d = c
-        detach = c
+        let c = aCh[i];
+        c.lane = LANE.REMOVE;
+        detach.d = c;
+        detach = c;
       }
     }
     let lis = findLis(P, bHead),
-      i = lis.length - 1
+      i = lis.length - 1;
 
     while (bHead <= bTail) {
-      let c = bCh[bTail]
+      let c = bCh[bTail];
       if (bTail === lis[i]) {
-        clone(aCh[P[bTail]], c, LANE.UPDATE, WIP, bTail--)
-        i--
+        clone(aCh[P[bTail]], c, LANE.UPDATE, WIP, bTail--);
+        i--;
       } else if (P[bTail] === -1) {
-        c.lane = LANE.INSERT
-        linke(c, WIP, bTail--)
+        c.lane = LANE.INSERT;
+        linke(c, WIP, bTail--);
       } else {
-        clone(aCh[P[bTail]], c, LANE.INSERT, WIP, bTail--)
+        clone(aCh[P[bTail]], c, LANE.INSERT, WIP, bTail--);
       }
     }
   }
 
   while (bHead-- > 0) {
-    clone(aCh[bHead], bCh[bHead], LANE.UPDATE, WIP, bHead)
+    clone(aCh[bHead], bCh[bHead], LANE.UPDATE, WIP, bHead);
   }
-}
+};
 
 function linke(kid, WIP, i) {
-  kid.parent = WIP
+  kid.parent = WIP;
   if (WIP.lane & LANE.SVG) {
-    kid.lane |= LANE.SVG
+    kid.lane |= LANE.SVG;
   }
   if (WIP.isComp && WIP.lane & LANE.INSERT) {
-    kid.lane |= LANE.INSERT
+    kid.lane |= LANE.INSERT;
   }
   if (i === WIP.kids.length - 1) {
-    WIP.child = kid
+    WIP.child = kid;
   } else {
-    WIP._prev.sibling = kid
+    WIP._prev.sibling = kid;
   }
-  WIP._prev = kid
+  WIP._prev = kid;
 }
 
 function clone(a, b, lane, WIP, i) {
   if (same(a, b)) {
-    b.hooks = a.hooks
-    b.ref = a.ref
-    b.node = a.node
-    b.oldProps = a.props
+    b.hooks = a.hooks;
+    b.ref = a.ref;
+    b.node = a.node;
+    b.oldProps = a.props;
   }
-  b.kids = a.kids
-  b.lane = lane
-  linke(b, WIP, i)
+  b.kids = a.kids;
+  b.lane = lane;
+  linke(b, WIP, i);
 }
 
 const same = (a, b) => {
-  return a && b && a.key === b.key && a.type === b.type
-}
+  return a && b && a.key === b.key && a.type === b.type;
+};
 
-export const arrayfy = arr => (!arr ? [] : isArr(arr) ? arr : [arr])
+export const arrayfy = (arr) => (!arr ? [] : isArr(arr) ? arr : [arr]);
 
 const side = (effects: IEffect[]): void => {
-  effects.forEach(e => e[2] && e[2]())
-  effects.forEach(e => (e[2] = e[0]()))
-  effects.length = 0
-}
+  effects.forEach((e) => e[2] && e[2]());
+  effects.forEach((e) => (e[2] = e[0]()));
+  effects.length = 0;
+};
 
 const findLis = (ns, start) => {
   let seq = [],
     is = [],
     l = -1,
-    pre = new Array(ns.length)
+    pre = new Array(ns.length);
 
   for (var i = start, len = ns.length; i < len; i++) {
-    let n = ns[i]
-    if (n < 0) continue
-    let j = bs(seq, n)
-    if (j !== -1) pre[i] = is[j]
+    let n = ns[i];
+    if (n < 0) continue;
+    let j = bs(seq, n);
+    if (j !== -1) pre[i] = is[j];
     if (j === l) {
-      l++
-      seq[l] = n
-      is[l] = i
+      l++;
+      seq[l] = n;
+      is[l] = i;
     } else if (n < seq[j + 1]) {
-      seq[j + 1] = n
-      is[j + 1] = i
+      seq[j + 1] = n;
+      is[j + 1] = i;
     }
   }
   for (i = is[l]; l >= 0; i = pre[i], l--) {
-    seq[l] = i
+    seq[l] = i;
   }
-  return seq
-}
+  return seq;
+};
 
 const bs = (seq, n) => {
   let lo = -1,
-    hi = seq.length
+    hi = seq.length;
   if (hi > 0 && seq[hi - 1] <= n) {
-    return hi - 1
+    return hi - 1;
   }
   while (hi - lo > 1) {
-    let mid = (lo + hi) >> 1
+    let mid = (lo + hi) >> 1;
     if (seq[mid] > n) {
-      hi = mid
+      hi = mid;
     } else {
-      lo = mid
+      lo = mid;
     }
   }
-  return lo
-}
+  return lo;
+};
 
-export const getCurrentFiber = () => currentFiber || null
-export const isFn = (x: any): x is Function => typeof x === 'function'
-export const isStr = (s: any): s is number | string =>
-  typeof s === 'number' || typeof s === 'string'
+export const getCurrentFiber = () => currentFiber || null;
+export const isFn = (x: any): x is Function => typeof x === 'function';
+export const isStr = (s: any): s is number | string => typeof s === 'number' || typeof s === 'string';
